@@ -1,0 +1,43 @@
+---
+openapi: 3.0.1
+info:
+  title: API V1
+  version: v1
+paths:
+  "/api/v1/users/signup":
+    post:
+      summary: user signup
+      tags:
+      - Authentication
+      parameters: []
+      responses:
+        '200':
+          description: signed up successfully
+        '422':
+          description: invalid input
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    password:
+                      type: string
+                    password_confirmation:
+                      type: string
+                  required:
+                  - email
+                  - password
+                  - password_confirmation
+              required:
+              - user
+servers:
+- url: http://{defaultHost}
+  variables:
+    defaultHost:
+      default: localhost:3000
