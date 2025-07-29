@@ -4,18 +4,32 @@ module Api
       class SessionsController < Devise::SessionsController
         respond_to :json
 
+        def create
+          # Find user by email
+          user = User.find_by(email: sign_in_params[:email])
+
+          # Check if user exists and password is valid
+          if user&.valid_password?(sign_in_params[:password])
+            # Generate JWT token without signing in
+            token = Warden::JWTAuth::UserEncoder.new.call(user, :user, nil)
+            render json: {
+              message: 'Logged in successfully',
+              user: user,
+              token: token
+            }, status: :ok
+          else
+            render json: { error: 'Invalid email or password' }, status: :unauthorized
+          end
+        end
+
         private
 
-        def respond_with(resource, _opts = {})
-          render json: {
-            message: 'Logged in successfully',
-            user: resource,
-            token: request.env['warden-jwt_auth.token']
-          }, status: :ok
+        def sign_in_params
+          params.require(:user).permit(:email, :password)
         end
 
         def respond_to_on_destroy
-          render json: { message: "Logged out." }, status: :ok
+          render json: { message: 'Logged out.' }, status: :ok
         end
       end
     end

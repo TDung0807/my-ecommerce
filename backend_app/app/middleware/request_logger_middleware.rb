@@ -17,7 +17,7 @@ class RequestLoggerMiddleware
     @requests[ip] << Time.now
 
     if @requests[ip].size > 50
-      puts "[BLOCKED] #{ip} đã vượt quá giới hạn rate"
+      puts "[BLOCKED] #{ip} out of limit"
       return [429, { "Content-Type" => "text/plain" }, ["Too Many Requests"]]
     end
 
