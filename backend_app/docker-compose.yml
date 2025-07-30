@@ -3,17 +3,37 @@ version: '3.9'
 services:
   web:
     build: .
+    command: bundle exec rails server -b 0.0.0.0 -p 3000
     ports:
       - "3000:3000"
     depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: password
+      REDIS_URL: redis://redis:6379/1
+
+  sidekiq:
+    build: .
+    depends_on:
+      - redis
       - db
     environment:
       DATABASE_HOST: db
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: password
+      REDIS_URL: redis://redis:6379/1
+    command: bundle exec sidekiq
 
   db:
     image: postgres:15
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"

@@ -37,6 +37,8 @@ gem 'rack-cors'
 gem 'rack-attack'
 gem 'devise'
 gem 'devise-jwt'
+gem 'redis'
+gem 'sidekiq'
 group :development, :test do
   gem 'rspec-rails'
   gem 'factory_bot_rails'
