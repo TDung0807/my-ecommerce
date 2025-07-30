@@ -14,8 +14,7 @@ module Api
             token = Warden::JWTAuth::UserEncoder.new.call(user, :user, nil)
             render json: {
               message: 'Logged in successfully',
-              user: user,
-              token: token
+              token: token[0]
             }, status: :ok
           else
             render json: { error: 'Invalid email or password' }, status: :unauthorized

@@ -1,41 +1,148 @@
----
 openapi: 3.0.1
 info:
   title: API V1
   version: v1
+
+servers:
+  - url: http://{defaultHost}
+    variables:
+      defaultHost:
+        default: localhost:3000
+
 paths:
   "/api/v1/users/signup":
     post:
       summary: user signup
       tags:
-      - Authentication
-      parameters: []
-      responses:
-        '200':
-          description: signed up successfully
-        '422':
-          description: invalid input
+        - Authentication
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                user:
-                  type: object
-                  properties:
-                    email:
-                      type: string
-                    password:
-                      type: string
-                    password_confirmation:
-                      type: string
-                  required:
-                  - email
-                  - password
-                  - password_confirmation
-              required:
-              - user
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '200':
+          description: signed up successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  "/api/v1/users/login":
+    post:
+      summary: user login
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: login successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: incorrect email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Signed up successfully
+        user:
+          type: object
+          example:
+            id: 5
+            email: user@example.com
+            created_at: "2025-07-30T07:10:43.401Z"
+            updated_at: "2025-07-30T07:10:43.401Z"
+
+    SignupRequest:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+            password_confirmation:
+              type: string
+          required:
+            - email
+            - password
+            - password_confirmation
+      required:
+        - user
+
+    LoginRequest:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            email:
+              type: string
+              example: user@example.com
+            password:
+              type: string
+              example: password
+          required:
+            - email
+            - password
+      required:
+        - user
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Logged in successfully
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Sign up failed
+        errors:
+          type: array
+          items:
+            type: string
+          example:
+            - "Email can't be blank"
+            - "Password can't be blank"
+
+    UnauthorizedResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Invalid email or password
+
 servers:
 - url: http://{defaultHost}
   variables:
