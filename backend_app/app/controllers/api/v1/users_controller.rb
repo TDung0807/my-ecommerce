@@ -10,7 +10,9 @@ module Api
           render json: JSON.parse(cached_users)
         else
           users = User.all
-          $redis.set("users:all", users.to_json)
+          if users
+            $redis.set("users:all", users.to_json)
+          end
           render json: users
         end
       end
