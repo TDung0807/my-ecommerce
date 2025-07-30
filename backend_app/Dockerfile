@@ -11,9 +11,7 @@ COPY Gemfile* ./
 RUN bundle install
 
 COPY . .
-COPY bin/docker-entrypoint ./bin/docker-entrypoint
 RUN chmod +x ./bin/docker-entrypoint
 
 ENTRYPOINT ["./bin/docker-entrypoint"]
 EXPOSE 3000
-CMD ["rails", "server", "-b", "0.0.0.0"]
