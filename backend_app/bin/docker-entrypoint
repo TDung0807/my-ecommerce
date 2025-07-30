@@ -1,4 +1,8 @@
 #!/bin/bash
 set -e
 
-bundle exec rails server -b 0.0.0.0
+echo "== Preparing database =="
+bundle exec rails db:drop db:create db:migrate
+
+echo "== Starting Rails server =="
+exec bundle exec rails server -b 0.0.0.0 -p 3000
