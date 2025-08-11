@@ -1,0 +1,118 @@
+name: Test & Deploy (docker-compose v1)
+
+on:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install docker-compose v1
+        run: |
+          if ! command -v docker-compose >/dev/null 2>&1; then
+            VERSION="1.29.2"
+            sudo curl -L "https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          docker-compose version
+
+      # Start only DB & Redis from your compose file (has healthchecks)
+      - name: Start DB & Redis
+        run: |
+          docker-compose up -d db redis
+          echo "Waiting for Postgres healthcheck..."
+          for i in {1..60}; do
+            if docker-compose ps | grep db | grep -q "(healthy)"; then
+              echo "Postgres healthy"; break
+            fi
+            sleep 2
+          done
+          echo "Waiting for Redis healthcheck..."
+          for i in {1..60}; do
+            if docker-compose ps | grep redis | grep -q "(healthy)"; then
+              echo "Redis healthy"; break
+            fi
+            sleep 2
+          done
+
+      # Run tests inside the web image with test env overrides
+      - name: Run RSpec
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:password@db:5432/app_test
+          REDIS_URL: redis://redis:6379/2
+        run: |
+          # Build and run test in the web container
+          docker-compose run --rm \
+            -e RAILS_ENV=test \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            -e REDIS_URL="${REDIS_URL}" \
+            web bash -lc "
+              rm -f tmp/pids/server.pid &&
+              bundle exec rails db:prepare &&
+              bundle exec rspec --format documentation
+            "
+
+      - name: Shutdown services
+        if: always()
+        run: docker-compose down -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy repo to VPS (non-destructive)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "."
+          target: "~/trdung"
+          rm: false
+          overwrite: true
+          exclude: |
+            .git
+            node_modules
+            tmp
+            log
+
+      - name: Deploy via SSH (docker-compose v1)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ~/trdung/backend_app
+
+            if ! command -v docker-compose >/dev/null 2>&1; then
+              VERSION="1.29.2"
+              sudo curl -L "https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+
+            echo "PWD=$(pwd)"; ls -la
+            [ -f docker-compose.yml ] || { echo "❌ docker-compose.yml missing in backend_app/"; exit 1; }
+
+            docker-compose config -q
+            sudo docker-compose down || true
+            sudo docker-compose up -d --build --remove-orphans
+            sudo docker image prune -f || true
