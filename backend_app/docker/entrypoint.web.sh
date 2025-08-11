@@ -1,32 +1,11 @@
-#!/usr/bin/env
-set -euo pipefail
+#!/bin/bash
+set -e
 
-wait_for() {
-  host="$1"; port="$2"
-  echo "⏳ waiting for $host:$port..."
-  for i in {1..60}; do
-    (echo > /dev/tcp/$host/$port) >/dev/null 2>&1 && echo "✅ $host:$port up" && return 0
-    sleep 1
-  done
-  echo "❌ $host:$port not reachable" >&2
-  exit 1
-}
-
-# Wait for DB & Redis
-wait_for "${DATABASE_HOST:-db}" 5432
-wait_for "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://([^:/]+).*|\1|')" \
-         "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://[^:]+:([0-9]+).*|\1|')"
-
-# Clean up old server PID
+# Remove any stale server PID
 rm -f tmp/pids/server.pid
 
-# DB setup
-bundle exec rails db:prepare
+# Run database migrations (optional, remove if not needed for dev)
+bundle exec rails db:migrate 2>/dev/null || true
 
-# Assets in production
-if [ "${RAILS_ENV:-development}" = "production" ]; then
-  bundle exec rails assets:precompile
-fi
-
-# Start Rails server
-exec bundle exec rails server -b 0.0.0.0 -p "${PORT:-3000}"
+# Start Rails server on 0.0.0.0
+exec bundle exec rails server -b 0.0.0.0 -p ${PORT:-3000}

@@ -1,4 +1,4 @@
-#!/usr/bin/env
+#!/usr/bin/env bash
 set -euo pipefail
 
 wait_for() {
@@ -12,13 +12,11 @@ wait_for() {
   exit 1
 }
 
-# Wait for DB & Redis
 wait_for "${DATABASE_HOST:-db}" 5432
 wait_for "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://([^:/]+).*|\1|')" \
          "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://[^:]+:([0-9]+).*|\1|')"
 
-# DB setup
+# Ensure DB is migrated (optional but handy in dev)
 bundle exec rails db:prepare
 
-# Start Sidekiq
 exec bundle exec sidekiq
