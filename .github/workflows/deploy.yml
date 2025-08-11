@@ -22,7 +22,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "."
-          target: "~/my-ecommerce"
+          target: "~/trdung"
           rm: true
           overwrite: true
           exclude: |
@@ -39,7 +39,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd ~/my-ecommerce
+            cd ~/trdung
 
             # Ensure docker-compose v1 exists (install if missing)
             if ! command -v docker-compose >/dev/null 2>&1; then
