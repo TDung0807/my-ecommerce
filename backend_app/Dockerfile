@@ -15,6 +15,8 @@ RUN apt-get update \
       build-essential \
       libpq-dev \
       postgresql-client \
+      libyaml-dev \
+      pkg-config \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
