@@ -11,11 +11,12 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy repo to VPS
+      - name: Copy repo to VPS (non-destructive)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -23,7 +24,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "."
           target: "~/trdung"
-          rm: true
+          rm: false
           overwrite: true
           exclude: |
             .git
@@ -41,7 +42,7 @@ jobs:
             set -euo pipefail
             cd ~/trdung
 
-            # Ensure docker-compose v1 exists (install if missing)
+            # Ensure docker-compose v1 exists
             if ! command -v docker-compose >/dev/null 2>&1; then
               echo "Installing docker-compose v1..."
               VERSION="1.29.2"
@@ -50,12 +51,18 @@ jobs:
               docker-compose version
             fi
 
-            # Show effective config (quick sanity check)
+            echo "PWD=$(pwd)"
+            ls -la
+
+            # Must exist in repo root (Fix A)
+            [ -f docker-compose.yml ] || { echo "❌ docker-compose.yml missing at repo root"; exit 1; }
+
+            # Validate compose
             docker-compose config -q
 
-            # Recreate stack
-            docker-compose down || true
-            docker-compose up -d --build --remove-orphans
+            # Recreate stack (sudo if user not in docker group)
+            sudo docker-compose down || true
+            sudo docker-compose up -d --build --remove-orphans
 
-            # Clean dangling images
-            docker image prune -f || true
+            # Cleanup
+            sudo docker image prune -f || true
