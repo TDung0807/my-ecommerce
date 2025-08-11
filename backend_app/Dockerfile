@@ -15,12 +15,8 @@ ENV RAILS_ENV=production \
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       build-essential \
-      git \
-      pkg-config \
       libpq-dev \
       postgresql-client \
-      libxml2-dev \
-      libxslt1-dev \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
