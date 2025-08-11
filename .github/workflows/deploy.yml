@@ -32,7 +32,6 @@ jobs:
           script: |
             cd ~/trdung
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-            docker compose pull
-            # optional: run migrations automatically
-            docker compose run --rm web bundle exec rails db:migrate
-            docker compose up -d
+            docker-compose pull
+            docker-compose run --rm web bundle exec rails db:migrate
+            docker-compose up -d
