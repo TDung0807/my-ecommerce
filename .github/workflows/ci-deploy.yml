@@ -28,34 +28,36 @@ jobs:
           fi
           docker-compose version
 
-      # Start only DB & Redis from your compose file (has healthchecks)
-      - name: Start DB & Redis
+      - name: Build web image
+        run: docker-compose build web
+
+      - name: Start DB & Redis (background)
         run: |
           docker-compose up -d db redis
-          echo "Waiting for Postgres healthcheck..."
+          echo "⏳ waiting for Postgres..."
           for i in {1..60}; do
             if docker-compose ps | grep db | grep -q "(healthy)"; then
-              echo "Postgres healthy"; break
+              echo "✅ Postgres healthy"; break
             fi
             sleep 2
           done
-          echo "Waiting for Redis healthcheck..."
+          echo "⏳ waiting for Redis..."
           for i in {1..60}; do
             if docker-compose ps | grep redis | grep -q "(healthy)"; then
-              echo "Redis healthy"; break
+              echo "✅ Redis healthy"; break
             fi
             sleep 2
           done
 
-      # Run tests inside the web image with test env overrides
+      # IMPORTANT: override ENTRYPOINT so it doesn't start the Rails server
       - name: Run RSpec
         env:
           RAILS_ENV: test
           DATABASE_URL: postgres://postgres:password@db:5432/app_test
           REDIS_URL: redis://redis:6379/2
         run: |
-          # Build and run test in the web container
           docker-compose run --rm \
+            --entrypoint "" \
             -e RAILS_ENV=test \
             -e DATABASE_URL="${DATABASE_URL}" \
             -e REDIS_URL="${REDIS_URL}" \
