@@ -7,7 +7,7 @@ servers:
   - url: http://{defaultHost}
     variables:
       defaultHost:
-        default: localhost:3000
+        default: 129.150.62.81:3000
 
 paths:
   "/api/v1/users/signup":
