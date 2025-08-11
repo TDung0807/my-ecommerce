@@ -1,6 +1,5 @@
 FROM ruby:3.3-slim
 
-# --- Env ---
 ENV RAILS_ENV=production \
     RACK_ENV=production \
     BUNDLE_WITHOUT="development test" \
@@ -8,10 +7,9 @@ ENV RAILS_ENV=production \
     BUNDLE_JOBS=4 \
     BUNDLE_RETRY=3 \
     BUNDLE_PATH=/usr/local/bundle \
-    # compile native gems on arm64 if needed
     BUNDLE_FORCE_RUBY_PLATFORM=true
 
-# --- System deps for pg/nokogiri/etc. + psql client ---
+# + libyaml-dev + pkg-config for psych
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       build-essential \
@@ -21,16 +19,12 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# --- Install gems ---
+# Ensure arm64 is allowed (best: commit this change)
 COPY Gemfile Gemfile.lock ./
-# Add arm64 platform to the lockfile during image build (best is to commit this change in repo)
-RUN bundle lock --add-platform aarch64-linux \
- && bundle install
+RUN bundle lock --add-platform aarch64-linux && bundle install
 
-# --- App code ---
 COPY . .
 
-# --- Entrypoints (fix CRLF if any) ---
 COPY docker/entrypoint.web.sh /usr/bin/entrypoint.web.sh
 COPY docker/entrypoint.sidekiq.sh /usr/bin/entrypoint.sidekiq.sh
 RUN sed -i 's/\r$//' /usr/bin/entrypoint.web.sh /usr/bin/entrypoint.sidekiq.sh \
