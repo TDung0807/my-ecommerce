@@ -19,7 +19,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./backend_app
+          file: ./backend_app/Dockerfile
           push: true
           tags: ghcr.io/tdung0807/my-ecommerce:latest
       - name: SSH and deploy
