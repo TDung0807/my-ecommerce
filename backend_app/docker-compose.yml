@@ -3,37 +3,63 @@ version: '3.9'
 services:
   web:
     build: .
-    command: ""
+    entrypoint: ["/usr/bin/entrypoint.web.sh"]
+    # command left empty because entrypoint starts the server
     ports:
       - "3000:3000"
-    depends_on:
-      - db
-      - redis
     environment:
+      RAILS_ENV: development
+      PORT: 3000
       DATABASE_HOST: db
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: password
+      DATABASE_URL: postgres://postgres:password@db:5432/app_development
       REDIS_URL: redis://redis:6379/1
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
 
   sidekiq:
     build: .
-    depends_on:
-      - redis
-      - db
+    entrypoint: ["/usr/bin/entrypoint.sidekiq.sh"]
     environment:
+      RAILS_ENV: development
       DATABASE_HOST: db
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: password
+      DATABASE_URL: postgres://postgres:password@db:5432/app_development
       REDIS_URL: redis://redis:6379/1
-    command: bundle exec sidekiq
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
 
   db:
     image: postgres:15
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+      POSTGRES_DB: app_development
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app_development"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

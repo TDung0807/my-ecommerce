@@ -5,13 +5,13 @@ RUN apt-get update \
 		postgresql-client \
 	&& rm -rf /var/lib/apt/lists/*
 
-WORKDIR /usr/src/app
-
-COPY Gemfile* ./
+WORKDIR /app
+COPY Gemfile Gemfile.lock ./
 RUN bundle install
-
 COPY . .
-RUN chmod +x ./bin/docker-entrypoint
 
-ENTRYPOINT ["./bin/docker-entrypoint"]
-EXPOSE 3000
+COPY docker/entrypoint.web.sh /usr/bin/entrypoint.web.sh
+COPY docker/entrypoint.sidekiq.sh /usr/bin/entrypoint.sidekiq.sh
+RUN chmod +x /usr/bin/entrypoint.web.sh /usr/bin/entrypoint.sidekiq.sh
+
+ENTRYPOINT ["/usr/bin/entrypoint.web.sh"]
