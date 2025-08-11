@@ -12,11 +12,13 @@ wait_for() {
   exit 1
 }
 
+# Wait for DB & Redis
 wait_for "${DATABASE_HOST:-db}" 5432
 wait_for "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://([^:/]+).*|\1|')" \
          "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://[^:]+:([0-9]+).*|\1|')"
 
-# Ensure DB is migrated (optional but handy in dev)
+# DB setup
 bundle exec rails db:prepare
 
+# Start Sidekiq
 exec bundle exec sidekiq

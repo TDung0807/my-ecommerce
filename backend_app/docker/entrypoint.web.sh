@@ -12,20 +12,21 @@ wait_for() {
   exit 1
 }
 
-# Wait for DB and Redis
+# Wait for DB & Redis
 wait_for "${DATABASE_HOST:-db}" 5432
 wait_for "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://([^:/]+).*|\1|')" \
          "$(echo "${REDIS_URL:-redis://redis:6379/1}" | sed -E 's|redis://[^:]+:([0-9]+).*|\1|')"
 
-# Clean up old server PID (puma/rails)
+# Clean up old server PID
 rm -f tmp/pids/server.pid
 
-# DB setup (idempotent)
+# DB setup
 bundle exec rails db:prepare
 
-# Optionally precompile assets in production
+# Assets in production
 if [ "${RAILS_ENV:-development}" = "production" ]; then
   bundle exec rails assets:precompile
 fi
 
+# Start Rails server
 exec bundle exec rails server -b 0.0.0.0 -p "${PORT:-3000}"
