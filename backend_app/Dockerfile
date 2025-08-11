@@ -1,4 +1,3 @@
-# Ruby runtime
 FROM ruby:3.4.4
 
 ENV RAILS_ENV=production \
@@ -6,14 +5,10 @@ ENV RAILS_ENV=production \
     BUNDLE_WITHOUT="development test" \
     BUNDLE_DEPLOYMENT=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential \
-      libpq-dev \
-      postgresql-client \
-      nodejs \
-      curl \
-      tzdata \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		postgresql-client \
+	&& rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -31,3 +26,4 @@ RUN sed -i 's/\r$//' /usr/bin/entrypoint.web.sh /usr/bin/entrypoint.sidekiq.sh \
 EXPOSE 3000
 
 ENTRYPOINT ["/usr/bin/entrypoint.web.sh"]
+

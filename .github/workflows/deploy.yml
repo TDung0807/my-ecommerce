@@ -35,3 +35,4 @@ jobs:
             docker-compose pull
             docker-compose run --rm web bundle exec rails db:migrate
             docker-compose up -d
+          command_timeout: 60m
