@@ -40,7 +40,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd ~/trdung
+            cd ~/trdung/backend_app
 
             # Ensure docker-compose v1 exists
             if ! command -v docker-compose >/dev/null 2>&1; then
