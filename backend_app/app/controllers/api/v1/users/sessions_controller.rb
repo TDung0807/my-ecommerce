@@ -2,6 +2,7 @@ module Api
   module V1
     module Users
       class SessionsController < Devise::SessionsController
+        skip_before_action :authorize_request, only: :create
         respond_to :json
 
         def create
