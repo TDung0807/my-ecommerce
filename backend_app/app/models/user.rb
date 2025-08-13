@@ -5,4 +5,7 @@ class User < ApplicationRecord
          jwt_revocation_strategy: Devise::JWT::RevocationStrategies::JTIMatcher
   validates :email, presence: true
   validates :password, presence: true
+
+  has_many :user_addresses, dependent: :destroy
+  has_one :cart, dependent: :destroy
 end
