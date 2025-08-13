@@ -1,5 +1,0 @@
-# Ignore Rails temp & logs during SCP deploy
-backend_app/tmp
-backend_app/log
-**/*.log
-**/tmp/**
