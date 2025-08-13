@@ -2,6 +2,7 @@ module Api
   module V1
     module Users
       class RegistrationsController < Devise::RegistrationsController
+        skip_before_action :authorize_request, only: :create
         respond_to :json
 
         def create
@@ -9,7 +10,7 @@ module Api
 
           resource.save
           if resource.persisted?
-            sign_in(resource_name, resource, store: false) # ✅ disable session store
+            sign_in(resource_name, resource, store: false) 
             respond_with resource
           else
             clean_up_passwords resource
