@@ -1,8 +1,11 @@
 name: Test & Deploy (docker-compose v1)
 
 on:
-  push:
-    branches: [ main ]
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
 
 concurrency:
   group: deploy-vps
@@ -67,6 +70,29 @@ jobs:
               bundle exec rspec --format documentation
             "
 
+      # ✅ Generate OpenAPI files after tests pass
+      - name: Generate API docs (RSwag)
+        env:
+          RAILS_ENV: test
+        run: |
+          # Bind-mount the workspace so swagger files persist to host
+          docker-compose run --rm \
+            --entrypoint "" \
+            -v $(pwd):/app \
+            -e RAILS_ENV=test \
+            web bash -lc "
+              bundle exec rails rswag:specs:swaggerize
+            "
+          echo "Generated files:"
+          ls -la swagger || true
+
+      # ✅ Upload swagger folder for the deploy job
+      - name: Upload API docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: swagger
+
       - name: Shutdown services
         if: always()
         run: docker-compose down -v
@@ -78,6 +104,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # ✅ Pull the generated swagger back into the repo before SCP
+      - name: Download API docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-docs
+          path: backend_app/swagger
 
       - name: Copy repo to VPS (non-destructive)
         uses: appleboy/scp-action@v0.1.7
