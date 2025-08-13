@@ -42,7 +42,6 @@ jobs:
       - name: Start DB & Redis (background)
         run: |
           docker-compose up -d db redis
-
           echo "⏳ waiting for Postgres..."
           for i in {1..60}; do
             if docker-compose ps | grep db | grep -q "(healthy)"; then
@@ -50,7 +49,6 @@ jobs:
             fi
             sleep 2
           done
-
           echo "⏳ waiting for Redis..."
           for i in {1..60}; do
             if docker-compose ps | grep redis | grep -q "(healthy)"; then
@@ -72,28 +70,6 @@ jobs:
               bundle exec rspec --format documentation
             "
 
-      - name: Generate API docs (RSwag)
-        run: |
-          # Bind-mount so swagger files persist to host workspace
-          docker-compose run --rm \
-            --entrypoint "" \
-            -v $(pwd):/app \
-            -e RAILS_ENV="${RAILS_ENV}" \
-            -e DATABASE_URL="${DATABASE_URL}" \
-            -e REDIS_URL="${REDIS_URL}" \
-            web bash -lc "
-              rm -f tmp/pids/server.pid &&
-              bundle exec rails db:prepare &&
-              bundle exec rails rswag:specs:swaggerize
-            "
-          echo 'Generated files:' && ls -la swagger || true
-
-      - name: Upload API docs artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-docs
-          path: swagger
-
       - name: Shutdown services
         if: always()
         run: docker-compose down -v
@@ -109,11 +85,24 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      - name: Download API docs artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: api-docs
-          path: backend_app/swagger
+      - name: Generate API docs (RSwag)
+        working-directory: backend_app
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:password@db:5432/app_test
+          REDIS_URL: redis://redis:6379/2
+        run: |
+          docker-compose run --rm \
+            --entrypoint "" \
+            -v $(pwd):/app \
+            -e RAILS_ENV="${RAILS_ENV}" \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            -e REDIS_URL="${REDIS_URL}" \
+            web bash -lc "
+              rm -f tmp/pids/server.pid &&
+              bundle exec rails db:prepare &&
+              bundle exec rails rswag:specs:swaggerize
+            "
 
       - name: Copy repo to VPS (non-destructive)
         uses: appleboy/scp-action@v0.1.7
