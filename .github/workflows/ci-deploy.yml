@@ -92,7 +92,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      # 🔧 Install docker-compose v1 in deploy job (fixes 'command not found')
       - name: Install docker-compose v1
         run: |
           if ! command -v docker-compose >/dev/null 2>&1; then
@@ -102,7 +101,6 @@ jobs:
           fi
           docker-compose version
 
-      # Build and start deps to generate RSwag docs
       - name: Build web image
         run: docker-compose build web
 
@@ -143,7 +141,7 @@ jobs:
         if: always()
         run: docker-compose down -v
 
-      # Switch back to repo root for copy & deploy steps
+      # switch to repo root for SCP
       - name: Change to repo root
         shell: bash
         run: cd ..
@@ -161,8 +159,8 @@ jobs:
           exclude: |
             .git
             node_modules
-            tmp
-            log
+            backend_app/tmp
+            backend_app/log
 
       - name: Deploy via SSH (docker-compose v1)
         uses: appleboy/ssh-action@v1.2.0
