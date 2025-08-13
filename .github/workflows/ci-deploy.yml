@@ -91,7 +91,7 @@ jobs:
 
       - name: Install docker-compose v1
         run: |
-          if ! command -v docker-compose >/dev/null 2>&1; then
+          if ! command -v docker-compose >/dev/null 2}/{1}; then
             VERSION="1.29.2"
             sudo curl -L "https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
@@ -142,9 +142,21 @@ jobs:
         working-directory: backend_app
         run: docker-compose down -v
 
-      - name: Create tarball without tmp/log
+      # Stage a stable snapshot, excluding tmp/log so tar doesn't see changing files
+      - name: Stage files for deploy (rsync snapshot)
         run: |
-          tar --exclude='backend_app/tmp' --exclude='backend_app/log' -czf deploy.tar.gz .
+          rm -rf _package
+          mkdir -p _package
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='backend_app/tmp' \
+            --exclude='backend_app/log' \
+            ./ _package/
+
+      - name: Create deploy tarball
+        run: |
+          tar -C _package --warning=no-file-changed -czf deploy.tar.gz .
 
       - name: Copy repo to VPS (non-destructive)
         uses: appleboy/scp-action@v0.1.7
