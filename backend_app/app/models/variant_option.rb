@@ -1,0 +1,2 @@
+class VariantOption < ApplicationRecord
+end
