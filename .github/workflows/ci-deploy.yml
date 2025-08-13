@@ -2,10 +2,8 @@ name: Test & Deploy (docker-compose v1)
 
 on:
   pull_request:
-    types:
-      - closed
-    branches:
-      - main
+    types: [closed]
+    branches: [main]
 
 concurrency:
   group: deploy-vps
@@ -13,14 +11,21 @@ concurrency:
 
 jobs:
   test:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@db:5432/app_test
+      REDIS_URL: redis://redis:6379/2
     defaults:
       run:
         working-directory: backend_app
 
     steps:
-      - name: Checkout
+      - name: Checkout merged commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
       - name: Install docker-compose v1
         run: |
@@ -37,6 +42,7 @@ jobs:
       - name: Start DB & Redis (background)
         run: |
           docker-compose up -d db redis
+
           echo "⏳ waiting for Postgres..."
           for i in {1..60}; do
             if docker-compose ps | grep db | grep -q "(healthy)"; then
@@ -44,6 +50,7 @@ jobs:
             fi
             sleep 2
           done
+
           echo "⏳ waiting for Redis..."
           for i in {1..60}; do
             if docker-compose ps | grep redis | grep -q "(healthy)"; then
@@ -52,16 +59,11 @@ jobs:
             sleep 2
           done
 
-      # IMPORTANT: override ENTRYPOINT so it doesn't start the Rails server
       - name: Run RSpec
-        env:
-          RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:password@db:5432/app_test
-          REDIS_URL: redis://redis:6379/2
         run: |
           docker-compose run --rm \
             --entrypoint "" \
-            -e RAILS_ENV=test \
+            -e RAILS_ENV="${RAILS_ENV}" \
             -e DATABASE_URL="${DATABASE_URL}" \
             -e REDIS_URL="${REDIS_URL}" \
             web bash -lc "
@@ -70,23 +72,22 @@ jobs:
               bundle exec rspec --format documentation
             "
 
-      # ✅ Generate OpenAPI files after tests pass
       - name: Generate API docs (RSwag)
-        env:
-          RAILS_ENV: test
         run: |
-          # Bind-mount the workspace so swagger files persist to host
+          # Bind-mount so swagger files persist to host workspace
           docker-compose run --rm \
             --entrypoint "" \
             -v $(pwd):/app \
-            -e RAILS_ENV=test \
+            -e RAILS_ENV="${RAILS_ENV}" \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            -e REDIS_URL="${REDIS_URL}" \
             web bash -lc "
+              rm -f tmp/pids/server.pid &&
+              bundle exec rails db:prepare &&
               bundle exec rails rswag:specs:swaggerize
             "
-          echo "Generated files:"
-          ls -la swagger || true
+          echo 'Generated files:' && ls -la swagger || true
 
-      # ✅ Upload swagger folder for the deploy job
       - name: Upload API docs artifact
         uses: actions/upload-artifact@v4
         with:
@@ -98,14 +99,16 @@ jobs:
         run: docker-compose down -v
 
   deploy:
+    if: github.event.pull_request.merged == true
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout merged commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      # ✅ Pull the generated swagger back into the repo before SCP
       - name: Download API docs artifact
         uses: actions/download-artifact@v4
         with:
