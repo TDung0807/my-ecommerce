@@ -142,12 +142,9 @@ jobs:
         working-directory: backend_app
         run: docker-compose down -v
 
-      # 🔹 Pre-SCP cleanup (run at repo root)
-      - name: Pre-SCP cleanup
+      - name: Create tarball without tmp/log
         run: |
-          echo "🧹 Cleaning up tmp and log before upload..."
-          rm -rf backend_app/tmp/* || true
-          rm -rf backend_app/log/* || true
+          tar --exclude='backend_app/tmp' --exclude='backend_app/log' -czf deploy.tar.gz .
 
       - name: Copy repo to VPS (non-destructive)
         uses: appleboy/scp-action@v0.1.7
@@ -155,7 +152,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "."
+          source: "deploy.tar.gz"
           target: "~/trdung"
           rm: false
           overwrite: true
@@ -168,16 +165,16 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd ~/trdung/backend_app
+            cd ~/trdung
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
 
+            cd backend_app
             if ! command -v docker-compose >/dev/null 2>&1; then
               VERSION="1.29.2"
               sudo curl -L "https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
             fi
-
-            echo "PWD=$(pwd)"; ls -la
-            [ -f docker-compose.yml ] || { echo "❌ docker-compose.yml missing in backend_app/"; exit 1; }
 
             docker-compose config -q
             sudo docker-compose down || true
