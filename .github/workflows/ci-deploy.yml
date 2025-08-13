@@ -82,9 +82,6 @@ jobs:
       RAILS_ENV: test
       DATABASE_URL: postgres://postgres:password@db:5432/app_test
       REDIS_URL: redis://redis:6379/2
-    defaults:
-      run:
-        working-directory: backend_app
 
     steps:
       - name: Checkout merged commit
@@ -102,9 +99,11 @@ jobs:
           docker-compose version
 
       - name: Build web image
+        working-directory: backend_app
         run: docker-compose build web
 
       - name: Start DB & Redis (background)
+        working-directory: backend_app
         run: |
           docker-compose up -d db redis
           echo "⏳ waiting for Postgres..."
@@ -123,6 +122,7 @@ jobs:
           done
 
       - name: Generate API docs (RSwag)
+        working-directory: backend_app
         run: |
           docker-compose run --rm \
             --entrypoint "" \
@@ -139,12 +139,15 @@ jobs:
 
       - name: Shutdown local compose (cleanup)
         if: always()
+        working-directory: backend_app
         run: docker-compose down -v
 
-      # switch to repo root for SCP
-      - name: Change to repo root
-        shell: bash
-        run: cd ..
+      # 🔹 Pre-SCP cleanup (run at repo root)
+      - name: Pre-SCP cleanup
+        run: |
+          echo "🧹 Cleaning up tmp and log before upload..."
+          rm -rf backend_app/tmp/* || true
+          rm -rf backend_app/log/* || true
 
       - name: Copy repo to VPS (non-destructive)
         uses: appleboy/scp-action@v0.1.7
@@ -156,7 +159,6 @@ jobs:
           target: "~/trdung"
           rm: false
           overwrite: true
-          # .scpignore in repo root will exclude tmp/log etc.
 
       - name: Deploy via SSH (docker-compose v1)
         uses: appleboy/ssh-action@v1.2.0
