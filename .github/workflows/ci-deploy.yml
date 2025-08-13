@@ -156,11 +156,7 @@ jobs:
           target: "~/trdung"
           rm: false
           overwrite: true
-          exclude: |
-            .git
-            node_modules
-            backend_app/tmp
-            backend_app/log
+          # .scpignore in repo root will exclude tmp/log etc.
 
       - name: Deploy via SSH (docker-compose v1)
         uses: appleboy/ssh-action@v1.2.0
