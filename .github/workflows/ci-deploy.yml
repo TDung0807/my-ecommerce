@@ -78,6 +78,13 @@ jobs:
     if: github.event.pull_request.merged == true
     needs: test
     runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@db:5432/app_test
+      REDIS_URL: redis://redis:6379/2
+    defaults:
+      run:
+        working-directory: backend_app
 
     steps:
       - name: Checkout merged commit
@@ -85,12 +92,39 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
+      # 🔧 Install docker-compose v1 in deploy job (fixes 'command not found')
+      - name: Install docker-compose v1
+        run: |
+          if ! command -v docker-compose >/dev/null 2>&1; then
+            VERSION="1.29.2"
+            sudo curl -L "https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          docker-compose version
+
+      # Build and start deps to generate RSwag docs
+      - name: Build web image
+        run: docker-compose build web
+
+      - name: Start DB & Redis (background)
+        run: |
+          docker-compose up -d db redis
+          echo "⏳ waiting for Postgres..."
+          for i in {1..60}; do
+            if docker-compose ps | grep db | grep -q "(healthy)"; then
+              echo "✅ Postgres healthy"; break
+            fi
+            sleep 2
+          done
+          echo "⏳ waiting for Redis..."
+          for i in {1..60}; do
+            if docker-compose ps | grep redis | grep -q "(healthy)"; then
+              echo "✅ Redis healthy"; break
+            fi
+            sleep 2
+          done
+
       - name: Generate API docs (RSwag)
-        working-directory: backend_app
-        env:
-          RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:password@db:5432/app_test
-          REDIS_URL: redis://redis:6379/2
         run: |
           docker-compose run --rm \
             --entrypoint "" \
@@ -103,6 +137,16 @@ jobs:
               bundle exec rails db:prepare &&
               bundle exec rails rswag:specs:swaggerize
             "
+          echo 'Generated files:' && ls -la swagger || true
+
+      - name: Shutdown local compose (cleanup)
+        if: always()
+        run: docker-compose down -v
+
+      # Switch back to repo root for copy & deploy steps
+      - name: Change to repo root
+        shell: bash
+        run: cd ..
 
       - name: Copy repo to VPS (non-destructive)
         uses: appleboy/scp-action@v0.1.7
