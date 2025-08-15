@@ -10,7 +10,7 @@ module Api
 
           resource.save
           if resource.persisted?
-            sign_in(resource_name, resource, store: false) 
+            sign_in(resource_name, resource, store: false)
             respond_with resource
           else
             clean_up_passwords resource
@@ -26,6 +26,9 @@ module Api
 
         def respond_with(resource, _opts = {})
           if resource.persisted?
+            # Cache the user in Redis
+            RedisCache::Users.new.cache_on_register(resource)
+
             render json: {
               message: 'Signed up successfully',
               user: resource

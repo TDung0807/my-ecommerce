@@ -18,14 +18,14 @@ class User < ApplicationRecord
   private
 
   def cache_after_create
-    Services::Redis::Users.new.cache_on_register(self)
+    RedisCache::Users.new.cache_on_register(self)
   end
 
   def cache_after_update
-    Services::Redis::Users.new.update(self)
+    RedisCache::Users.new.update(self)
   end
 
   def purge_after_destroy
-    Services::Redis::Users.new.delete(self.id)
+    RedisCache::Users.new.delete(self.id)
   end
 end
