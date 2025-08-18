@@ -2,12 +2,17 @@ openapi: 3.0.1
 info:
   title: API V1
   version: v1
+servers:
+  - url: http://{defaultHost}
+    variables:
+      defaultHost:
+        # default: localhost:3000
+        default: '129.150.62.81:3000'
 paths:
   "/api/v1/users/signup":
     post:
       summary: user signup
-      tags:
-        - Authentication
+      tags: [Authentication]
       requestBody:
         content:
           application/json:
@@ -30,8 +35,7 @@ paths:
   "/api/v1/users/login":
     post:
       summary: user login
-      tags:
-        - Authentication
+      tags: [Authentication]
       requestBody:
         required: true
         content:
@@ -52,8 +56,280 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnauthorizedResponse'
 
+  "/api/v1/users/forgot_password":
+    post:
+      summary: request password reset instructions
+      tags: [Passwords]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+              required: [email]
+      responses:
+        '200':
+          description: always returns success message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset instructions sent successfully
+        '400':
+          description: missing email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Email is required
+
+  "/api/v1/users/reset_password":
+    post:
+      summary: reset password directly
+      tags: [Passwords]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+              required: [email, password, password_confirmation]
+      responses:
+        '200':
+          description: password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset successfully.
+        '422':
+          description: validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  "/api/v1/users/change_password":
+    post:
+      summary: change password (JWT required)
+      security:
+        - bearerAuth: []
+      tags: [Passwords]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    current_password:
+                      type: string
+                    password:
+                      type: string
+                    password_confirmation:
+                      type: string
+                  required: [current_password, password, password_confirmation]
+              required: [user]
+      responses:
+        '200':
+          description: password updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password updated successfully
+        '422':
+          description: invalid current password or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  "/api/v1/users":
+    get:
+      summary: list all users
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      responses:
+        '200':
+          description: users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      summary: create a new user
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        '201':
+          description: user created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          description: validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  "/api/v1/users/{id}":
+    get:
+      summary: get a user by ID
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: user found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      summary: update a user
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: user updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          description: validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: delete a user
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: user deleted
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        phone_number:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    UserCreateRequest:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+            name:
+              type: string
+            phone_number:
+              type: string
+          required: [email, password]
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+            name:
+              type: string
+            phone_number:
+              type: string
+
     UserResponse:
       type: object
       properties:
@@ -61,12 +337,7 @@ components:
           type: string
           example: Signed up successfully
         user:
-          type: object
-          example:
-            id: 5
-            email: user@example.com
-            created_at: "2025-07-30T07:10:43.401Z"
-            updated_at: "2025-07-30T07:10:43.401Z"
+          $ref: '#/components/schemas/User'
 
     SignupRequest:
       type: object
@@ -80,12 +351,8 @@ components:
               type: string
             password_confirmation:
               type: string
-          required:
-            - email
-            - password
-            - password_confirmation
-      required:
-        - user
+          required: [email, password, password_confirmation]
+      required: [user]
 
     LoginRequest:
       type: object
@@ -99,11 +366,8 @@ components:
             password:
               type: string
               example: password
-          required:
-            - email
-            - password
-      required:
-        - user
+          required: [email, password]
+      required: [user]
 
     LoginResponse:
       type: object
@@ -118,9 +382,6 @@ components:
     ErrorResponse:
       type: object
       properties:
-        message:
-          type: string
-          example: Sign up failed
         errors:
           type: array
           items:
@@ -135,10 +396,3 @@ components:
         error:
           type: string
           example: Invalid email or password
-
-servers:
-- url: http://{defaultHost}
-  variables:
-    defaultHost:
-      # default: 129.150.62.81:3000
-      default: localhost:3000

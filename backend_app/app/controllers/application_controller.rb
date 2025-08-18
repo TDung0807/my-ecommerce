@@ -12,8 +12,7 @@ class ApplicationController < ActionController::API
     header = header.split(' ').last if header
     if header.present?
       begin
-        payload, _ = JWT.decode(header, nil, false) # false = skip signature verification
-        puts "Decoded payload: #{payload.inspect}"
+        payload, _ = JWT.decode(header, nil, false) 
         @current_user = User.find(payload['sub'])
       rescue => e
         render json: { error: 'Incorrect token' }, status: :unauthorized

@@ -25,7 +25,7 @@ Rails.application.routes.draw do
         post 'users/change_password', to: 'users/passwords#update'
       end
 
-      resources :users
+      resources :users, only: [:index, :show, :create, :update, :destroy]
     end
   end
 end

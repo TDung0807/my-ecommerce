@@ -9,7 +9,7 @@ require 'devise'
 
 # Auto-load support files
 Dir[Rails.root.join('spec', 'support', '**', '*.rb')].each { |f| require f }
-
+Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
 # Maintain test schema
 begin
   ActiveRecord::Migration.maintain_test_schema!
@@ -21,7 +21,7 @@ RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include Devise::Test::IntegrationHelpers, type: :request
   config.before(:each, type: :request) do
-    host! "localhost"
+    host! (ENV["RSPEC_HOST"] || "localhost")
   end
   # If using fixtures (optional)
   config.fixture_paths = [
@@ -29,7 +29,6 @@ RSpec.configure do |config|
   ]
 
   config.use_transactional_fixtures = true
-
   # Automatically infer spec type from file location (recommended)
   config.infer_spec_type_from_file_location!
 
