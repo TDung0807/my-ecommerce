@@ -20,7 +20,9 @@ end
 RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include Devise::Test::IntegrationHelpers, type: :request
-
+  config.before(:each, type: :request) do
+    host! "localhost"
+  end
   # If using fixtures (optional)
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')
