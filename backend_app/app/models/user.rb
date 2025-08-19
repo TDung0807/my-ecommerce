@@ -7,5 +7,6 @@ class User < ApplicationRecord
   validates :password, presence: true
 
   has_many :user_addresses, dependent: :destroy
+  has_many :addresses, through: :user_addresses
   has_one :cart, dependent: :destroy
 end

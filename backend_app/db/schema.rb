@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_13_090853) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_19_090222) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -55,12 +55,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_13_090853) do
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "code"
+    t.index ["code"], name: "index_cities_on_code", unique: true
   end
 
   create_table "countries", force: :cascade do |t|
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "country_code"
+    t.index ["country_code"], name: "index_countries_on_country_code", unique: true
   end
 
   create_table "order_lines", force: :cascade do |t|
@@ -131,6 +135,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_13_090853) do
     t.bigint "user_id"
     t.bigint "address_id"
     t.index ["address_id"], name: "index_user_addresses_on_address_id"
+    t.index ["user_id", "address_id"], name: "index_user_addresses_on_user_and_address", unique: true, where: "(address_id IS NOT NULL)"
     t.index ["user_id"], name: "index_user_addresses_on_user_id"
   end
 

@@ -1,7 +1,7 @@
 require 'swagger_helper'
 
 RSpec.describe 'API::V1::Users::Passwords', type: :request do
-  path '/api/v1/users/forgot_password' do
+  path '/api/v1/auth/forgot_password' do
     post('forgot password') do
       tags 'Authentication'
       consumes 'application/json'

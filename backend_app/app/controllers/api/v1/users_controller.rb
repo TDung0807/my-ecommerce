@@ -5,16 +5,22 @@ module Api
 
       # GET /api/v1/users
       def index
-        cached_users = $redis.get("users:all")
-        if cached_users
-          render json: JSON.parse(cached_users)
+        users = nil
+        if (cached_users = $redis.get("users:all"))
+          parsed = JSON.parse(cached_users) rescue []
+          db_ids = User.pluck(:id)
+          if parsed.any? { |u| !db_ids.include?(u["id"]) }
+            users = User.all
+            $redis.set("users:all", users.to_json)
+          else
+            users = parsed
+          end
         else
           users = User.all
-          if users
-            $redis.set("users:all", users.to_json)
-          end
-          render json: users
+          $redis.set("users:all", users.to_json)
         end
+
+        render json: users
       end
 
       # GET /api/v1/users/:id
@@ -26,7 +32,8 @@ module Api
       def create
         user = User.new(user_params)
         if user.save
-          $redis.del("users:all") # invalidate cache
+          # clear cache so index is fresh
+          $redis.del("users:all")
           render json: user, status: :created
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
