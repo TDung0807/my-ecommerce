@@ -1,7 +1,7 @@
 require 'swagger_helper'
 
 RSpec.describe 'API::V1::Users::Registrations', type: :request do
-  path '/api/v1/users/signup' do
+  path '/api/v1/auth/signup' do
     post('user signup') do
       tags 'Authentication'
       consumes 'application/json'
@@ -22,15 +22,15 @@ RSpec.describe 'API::V1::Users::Registrations', type: :request do
         required: ['user']
       }
 
-      response(200, 'signed up successfully') do
+      response(201, 'signed up successfully') do
         let(:user) { { user: { email: 'user@example.com', password: 'password', password_confirmation: 'password' } } }
         run_test!
       end
 
-      # response(422, 'invalid input') do
-      #   let(:user) { { user: { email: '', password: '', password_confirmation: '' } } }
-      #   run_test!
-      # end
+      response(422, 'invalid input') do
+        let(:user) { { user: { email: '', password: '', password_confirmation: '' } } }
+        run_test!
+      end
     end
   end
 end

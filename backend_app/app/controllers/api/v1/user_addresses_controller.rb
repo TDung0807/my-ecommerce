@@ -21,25 +21,36 @@ module Api
 
       # POST /api/v1/users/:user_id/user_addresses
       def create
-        ua = @user.user_addresses.new(user_address_params)
-
         ActiveRecord::Base.transaction do
-          if ua.address.nil? && user_address_params[:address_attributes].present?
-            address = Address.create!(user_address_params[:address_attributes])
-            ua.address = address
+          ua = @user.user_addresses.new
+
+          # assign simple attributes first (string 'true'/'false' already normalized)
+          ua.is_default = user_address_params[:is_default]
+          ua.address_id = user_address_params[:address_id] if user_address_params[:address_id].present?
+
+          # build nested address, and attach the user if Address belongs_to :user
+          if (addr_attrs = user_address_params[:address_attributes]).present?
+            ua.build_address(addr_attrs)
+            ua.address.user = @user if ua.address.respond_to?(:user=) # only if Address belongs_to :user
           end
+
+          # optional debug AFTER building nested address so validations make sense
+          Rails.logger.info("ua attrs: #{ua.attributes.inspect}")
+          Rails.logger.info("ua.address attrs: #{ua.address&.attributes.inspect}")
 
           ua.save!
 
           if ua.is_default == 'true' || @user.user_addresses.where(is_default: 'true').where.not(id: ua.id).empty?
             ensure_single_default!(@user, ua)
           end
-        end
 
-        render json: ua.as_json(include: :address), status: :created
+          render json: ua.as_json(include: :address), status: :created
+        end
       rescue ActiveRecord::RecordInvalid => e
-        render json: { errors: ua.errors.full_messages.presence || [e.message] }, status: :unprocessable_entity
+        # show the real failing model's errors (could be Address or UserAddress)
+        render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
       end
+
 
 
       # GET /api/v1/user_addresses/:id

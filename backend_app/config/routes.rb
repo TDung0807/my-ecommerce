@@ -34,7 +34,7 @@ Rails.application.routes.draw do
         end
       end
 
-      # resources :addresses, only: [:index, :show, :create]
+      resources :addresses, only: [:index, :show, :create]
     end
   end
 end

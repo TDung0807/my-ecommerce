@@ -27,7 +27,7 @@ RSpec.describe 'API::V1::Users::Passwords', type: :request do
     end
   end
 
-  path '/api/v1/users/reset_password' do
+  path '/api/v1/auth/reset_password' do
     post('reset password') do
       tags 'Authentication'
       consumes 'application/json'
@@ -55,7 +55,7 @@ RSpec.describe 'API::V1::Users::Passwords', type: :request do
     end
   end
 
-  path '/api/v1/users/change_password' do
+  path '/api/v1/auth/change_password' do
     post('change password') do
       tags 'Authentication'
       consumes 'application/json'

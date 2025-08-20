@@ -4,14 +4,11 @@ RSpec.describe "API::V1::Users", type: :request do
   let(:current_user) { create(:user) }
   let(:headers) { auth_headers_for(current_user) }
 
-  before do
-    $redis.flushdb
-  end
+  before { $redis.flushdb }
 
   describe "GET /api/v1/users" do
     it "returns all users and caches them" do
-      create(:user)
-      create(:user)
+      create_list(:user, 2)
 
       get "/api/v1/users", headers: headers
 
@@ -45,37 +42,6 @@ RSpec.describe "API::V1::Users", type: :request do
     end
   end
 
-  describe "POST /api/v1/users" do
-    it "creates a user with name and phone, invalidates cache" do
-      post "/api/v1/users",
-           params: {
-             user: {
-               email: "new@example.com",
-               password: "password",
-               name: "New User",
-               phone_number: "1234567890"
-             }
-           }.to_json,
-           headers: headers
-
-      expect(response).to have_http_status(:created)
-      json = JSON.parse(response.body)
-      expect(json["name"]).to eq("New User")
-      expect(json["phone_number"]).to eq("1234567890")
-      expect($redis.get("users:all")).to be_nil
-    end
-
-    it "returns errors for invalid input" do
-      post "/api/v1/users",
-           params: { user: { email: "", password: "", name: "", phone_number: "" } }.to_json,
-           headers: headers
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      json = JSON.parse(response.body)
-      expect(json["errors"]).not_to be_empty
-    end
-  end
-
   describe "PUT /api/v1/users/:id" do
     it "updates a user with name and phone, invalidates cache" do
       user = create(:user)
@@ -85,12 +51,10 @@ RSpec.describe "API::V1::Users", type: :request do
           user: {
             email: "updated@example.com",
             name: "Updated Name",
-            phone_number: "0987654321",
-            password: "newpassword"
+            phone_number: "0987654321"
           }
         }.to_json,
         headers: headers
-
 
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)

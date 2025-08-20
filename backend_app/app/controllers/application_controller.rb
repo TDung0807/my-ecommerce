@@ -5,6 +5,7 @@ class ApplicationController < ActionController::API
 
   respond_to :json
   before_action :authorize_request
+  before_action :debug_auth_ids!, if: -> { Rails.env.development? || Rails.env.test? }
 
   private
   def authorize_request
@@ -24,5 +25,20 @@ class ApplicationController < ActionController::API
 
   def current_user
     @current_user
+  end
+  
+  def debug_auth_ids!
+    jwt = request.headers['Authorization']&.split&.last
+    payload =
+      begin
+        jwt ? Warden::JWTAuth::TokenDecoder.new.call(jwt) : nil
+      rescue StandardError
+        nil
+      end
+
+    Rails.logger.info(
+      "[AUTH] current_user.id=#{current_user&.id} email=#{current_user&.email} | "\
+      "JWT.sub=#{payload && payload['sub']} | path.user_id=#{params[:user_id].inspect}"
+    )
   end
 end
